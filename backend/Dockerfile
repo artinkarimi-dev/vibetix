@@ -1,4 +1,4 @@
-FROM node:24-bookworm-slim@sha256:d6aa754f16b3197301076f047b5def2f02ea1dbbc2ca920407d46d7ec7f87b20 AS build
+FROM node:25-bookworm-slim@sha256:81db02c4b671288a03915da9534dbd54f96d0e7c24d80ccc54f5b36b2e684370 AS build
 WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates && rm -rf /var/lib/apt/lists/*
 RUN npm install --global pnpm@11.25.0
@@ -16,7 +16,7 @@ RUN pnpm exec prisma generate --schema backend/prisma/schema.prisma && pnpm --fi
 RUN node -e 'const fs=require("node:fs"),p=require("node:path");fs.cpSync(p.resolve(p.dirname(require.resolve("@prisma/client")),"../../.prisma/client"),"/app/runtime-prisma",{recursive:true})'
 USER node
 
-FROM node:24-bookworm-slim@sha256:d6aa754f16b3197301076f047b5def2f02ea1dbbc2ca920407d46d7ec7f87b20 AS runtime
+FROM node:25-bookworm-slim@sha256:81db02c4b671288a03915da9534dbd54f96d0e7c24d80ccc54f5b36b2e684370 AS runtime
 ENV NODE_ENV=production
 WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates && rm -rf /var/lib/apt/lists/*
