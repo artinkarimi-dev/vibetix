@@ -1,0 +1,78 @@
+services:
+  backend:
+    image: ${VIBETIX_BACKEND_IMAGE:?Supply a reviewed immutable backend image digest}
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: ['/tmp:rw,noexec,nosuid,size=32m']
+    pids_limit: 128
+    mem_limit: 512m
+    cpus: 1
+    environment: &production-env
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 3001
+      APP_ORIGIN: ${APP_ORIGIN:?Set the canonical HTTPS origin}
+      DATABASE_URL_FILE: /run/secrets/database_url
+      REDIS_URL_FILE: /run/secrets/redis_url
+      TICKET_SIGNING_KEY_FILE: /run/secrets/ticket_key
+      ABUSE_KEY_SECRET_FILE: /run/secrets/abuse_key
+      RATE_LIMIT_BACKEND: redis
+      TRUSTED_PROXY_CIDRS: 172.30.85.2/32
+      EMAIL_TRANSPORT: disabled
+      ALLOW_SIMULATED_PAYMENTS: 'false'
+    secrets: [database_url, redis_url, ticket_key, abuse_key]
+    networks:
+      application:
+        ipv4_address: 172.30.85.3
+  worker:
+    image: ${VIBETIX_BACKEND_IMAGE}
+    command: [node, backend/dist/backend/src/worker.js]
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: ['/tmp:rw,noexec,nosuid,size=32m']
+    pids_limit: 128
+    mem_limit: 256m
+    cpus: 0.5
+    environment: *production-env
+    secrets: [database_url, redis_url, ticket_key, abuse_key]
+    healthcheck:
+      disable: true
+    networks: [application]
+  frontend:
+    image: ${VIBETIX_FRONTEND_IMAGE:?Supply a reviewed immutable frontend image digest}
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: ['/tmp:rw,noexec,nosuid,size=32m,uid=101,gid=101']
+    ports: ['80:8080', '443:8443']
+    volumes: ['${NGINX_HTTPS_CONFIG_FILE:?Supply approved rendered HTTPS vhost for your domain}:/etc/nginx/conf.d/default.conf:ro']
+    secrets: [tls_certificate, tls_private_key]
+    healthcheck:
+      disable: true
+    mem_limit: 128m
+    pids_limit: 64
+    networks:
+      application:
+        ipv4_address: 172.30.85.2
+networks:
+  application:
+    ipam:
+      config: [{subnet: 172.30.85.0/24}]
+secrets:
+  database_url:
+    file: ${DATABASE_URL_SECRET_FILE:?Required managed secret export}
+  redis_url:
+    file: ${REDIS_URL_SECRET_FILE:?Required managed secret export}
+  ticket_key:
+    file: ${TICKET_KEY_SECRET_FILE:?Required managed secret export}
+  abuse_key:
+    file: ${ABUSE_KEY_SECRET_FILE:?Required managed secret export}
+  tls_certificate:
+    file: ${TLS_CERTIFICATE_FILE:?Required certificate chain}
+  tls_private_key:
+    file: ${TLS_PRIVATE_KEY_FILE:?Required nginx-readable private key}

@@ -1,0 +1,6 @@
+services:
+  backend:
+    environment:
+      GLOBAL_RATE_LIMIT: '50000'
+      HOLD_RATE_LIMIT: '10'
+      CHECKOUT_RATE_LIMIT: '20'

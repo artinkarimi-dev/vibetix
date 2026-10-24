@@ -1,0 +1,17 @@
+services:
+  backend:
+    environment:
+      APP_ORIGIN: http://localhost:8088
+    mem_limit: 512m
+    cpus: 1
+  worker:
+    environment:
+      APP_ORIGIN: http://localhost:8088
+    mem_limit: 256m
+    cpus: 0.5
+    pids_limit: 128
+  frontend:
+
+    ports: !override ['127.0.0.1:8088:8080']
+    mem_limit: 128m
+    pids_limit: 64

@@ -1,0 +1,13 @@
+# Administrative security foundation
+
+Role authorization remains server-side with current database roles. Administrative sessions are limited to one hour absolute and 15 minutes idle, with configurable bounded limits. A customer promoted through an approved operator process is immediately subject to these limits; role changes do not turn a long-lived customer session into unlimited staff access.
+
+In production, every admin route also requires `Session.mfaVerifiedAt` within five minutes. Password login never sets it. `AdminMfaVerifier` and `completeAdminStepUp` provide a server-only integration boundary for a real trusted factor verifier. No header, frontend flag or environment bypass asserts MFA. No enrollment/verification endpoint or real factor provider has been implemented; therefore production administration is intentionally denied until that integration exists. Do not manually populate timestamps as a production workaround. A verifier must prevent replay, bind the proof to user/session, rate-limit challenges and audit enrollment/recovery and successful step-up.
+
+`AuditLog` records ID, actor ID, action, resource, resource ID, versioned allowlisted metadata, pseudonymized IP/user-agent and timestamp. IP/user-agent fields contain HMACs, not raw values. Metadata is constructed by the server and contains no submitted bodies, passwords, sessions, proof, payment/card fields or free-form request data.
+
+Event creation/changes and artist/venue changes write audit rows in the same PostgreSQL transaction as the mutation. Failure to append the audit aborts the change. Runtime can INSERT but cannot SELECT/UPDATE/DELETE/TRUNCATE audit rows; migrations/DB administrators still control the table. This is append-only to the runtime role, not tamper-proof against database owners. Export to a protected external sink with retention, access reviews and gap alerts.
+
+Action types reserve ticket changes, refund requests and user-role changes for future writers. Those operations currently have no application endpoints; their existence is not implied by the audit type. Any future writer must call `recordAudit` within its mutation transaction and receive a reviewed least-privilege grant. Direct SQL, administrator bootstrap and provisioning are operator actions requiring database/provider audit logs and an approved change record; application audit does not automatically observe out-of-band SQL.
+
+Tests cover lower-privilege denials, audit persistence, rollback on audit failure, denied audit mutation, stale admin sessions, missing/rejected/recent/stale MFA verification. Fake verifiers are injected only in isolated tests; no deployed MFA assurance is claimed.

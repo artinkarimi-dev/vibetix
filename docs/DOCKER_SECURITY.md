@@ -1,0 +1,19 @@
+# Docker security foundation
+
+Official Node/nginx/PostgreSQL/Redis multi-platform image digests were resolved from the Docker registry and pinned on 2026-10-14. CI action commits were likewise resolved and pinned. A digest makes an artifact immutable; it does not make it vulnerability-free. Schedule reviewed pin updates, image scans and base-image rebuilds. `apt` packages inside the Debian image are not separately snapshot-pinned, so a build is not bit-for-bit reproducible.
+
+Backend builds and Prisma generation run in a builder. Runtime copies compiled output and generated Prisma client/engine into a production dependency installation with lifecycle scripts disabled. Source, migrations and operations tools stay in the build target; runtime installation omits direct development dependencies, subject to the optional-peer qualification below. Runtime executes as `node`, uses an exec-form Node command and has dependency readiness. The separate migration job uses the build target and receives privileged credentials only there.
+
+The later runtime component inventory shows that Prisma and TypeScript may remain in the production dependency graph through optional peers, despite being root development dependencies. Do not interpret `--prod` as proof that every development tool is absent. Actual final-image contents and dependency footprint still require inspection on a Docker host; no untested manual pruning was added.
+
+Frontend builds use an explicit copy allowlist. nginx starts as its unprivileged user, listens on 8080/8443, stores PID/temp files under `/tmp`, and starts directly with `daemon off`. Local readiness checks its HTTP health endpoint. Production needs platform/certificate-aware HTTPS readiness; the template deliberately disables the HTTP-only inherited check.
+
+Compose recipes drop all API/worker/frontend capabilities, disallow privilege escalation, use read-only root filesystems, private bounded writable tmpfs mounts, process reaping and PID limits. Production additionally includes memory/CPU limits. Local email captures live on ephemeral private tmpfs; they are not durable email delivery. The worker has no HTTP listener, so its inherited API healthcheck is disabled; worker liveness/iteration/job-age monitoring must be supplied by the platform. Local PostgreSQL image initialization retains its official bootstrap behavior; production should use managed PostgreSQL with separate operations controls.
+
+The migration container is a one-shot job; do not restart migration/seed inside API startup or autoscaling replicas. Production catalog import is a separate reviewed operation. Local Compose bootstraps development data only.
+
+Build contexts exclude env/private-tooling/credential files. Approved dependency scripts are allowlisted in pnpm configuration; frozen lockfiles are used. Do not add private registry tokens with ARG/ENV/COPY; use [BuildKit secret mounts](https://docs.docker.com/build/building/secrets/) when required. Build hosts still run dependency code and need network/cache isolation.
+
+The later [pre-production report](PREPRODUCTION_VALIDATION_REPORT.md) records successful native nginx/local TLS, restricted-role, shared-limit and shutdown checks. Those do not validate the pinned container images.
+
+**Docker is not installed on the implementation host.** YAML parsing, pin resolution and source checks do not validate image builds, Prisma engine copying, nginx startup, UID/secret permissions, sandbox mounts or dependency/image CVEs. Required staging checks: build both targets; run `nginx -t`; verify non-root UID, signals/readiness and deep links; exercise migration/runtime credentials and shared limits; check private secrets with read-only root; inspect final layers/dependencies; scan/sign images and deploy by digest. Do not use the template as launch approval.

@@ -1,0 +1,21 @@
+services:
+  migrate:
+    build:
+      network: host
+      entitlements:
+        - network.host
+  backend:
+    build:
+      network: host
+      entitlements:
+        - network.host
+  worker:
+    build:
+      network: host
+      entitlements:
+        - network.host
+  frontend:
+    build:
+      network: host
+      entitlements:
+        - network.host

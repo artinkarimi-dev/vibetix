@@ -1,0 +1,33 @@
+packages:
+  - .
+  - backend
+  - packages/*
+allowBuilds:
+  esbuild: true
+
+  "@prisma/client": true
+  "@prisma/engines": true
+  prisma: true
+  embedded-postgres: true
+  "@embedded-postgres/linux-x64": true
+  '@embedded-postgres/darwin-arm64': set this to true or false
+  '@embedded-postgres/darwin-x64': set this to true or false
+  '@embedded-postgres/linux-arm': set this to true or false
+  '@embedded-postgres/linux-arm64': set this to true or false
+  '@embedded-postgres/linux-ia32': set this to true or false
+  '@embedded-postgres/linux-ppc64': set this to true or false
+  '@embedded-postgres/windows-x64': set this to true or false
+
+overrides:
+  effect: ^3.20.0
+  deepmerge-ts: ^8.0.0
+
+networkConcurrency: 2
+
+fetchRetries: 5
+
+fetchTimeout: 180000
+
+fetchRetryMintimeout: 10000
+
+fetchRetryMaxtimeout: 60000

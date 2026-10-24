@@ -1,0 +1,15 @@
+{
+  "scope": "Recommended vendor-neutral policy hooks. No collector or alert delivery configured.",
+  "rules": [
+    {"name":"api-errors","source":"api_request","condition":"5xx / all requests > 5% for 5m with at least 100 requests","severity":"page","action":"Check readiness/dependency events, stop rollout if correlated"},
+    {"name":"dependency-unavailable","source":"private readiness probe + dependency_unavailable/abuse_store_unavailable","condition":"3 consecutive readiness failures or dependency failures for 60s","severity":"page","action":"Check PostgreSQL/Redis availability, TLS and capacity; retain fail-closed controls"},
+    {"name":"worker-stalled","source":"worker_heartbeat","condition":"No heartbeat for 60s or oldestPendingSeconds > 300 for 5m","severity":"page","action":"Check worker process and disabled/provider transport state; inspect retry/expiry backlog"},
+    {"name":"worker-failures","source":"worker_iteration_failed/job_failed/job_retry","condition":"3 iteration failures within 60s or any terminal failed job","severity":"page","action":"Inspect fixed categories and protected job records; do not blindly resend externally"},
+    {"name":"checkout-failures","source":"checkout_failed/checkout_declined and api_request route=/api/v1/orders","condition":"Failure ratio > 10% for 5m with at least 20 attempts; exclude expected conflict/rate-limit policy from paging totals","severity":"investigate","action":"Correlate dependency events, hold expiry/conflicts and payment boundary; production PAYMENTS_DISABLED is expected before integration"},
+    {"name":"abuse-spike","source":"rate_limited/login_failed/authorization_failed","condition":"3x environment baseline for 10m, after establishing a baseline","severity":"investigate","action":"Review HMAC identities and policy, preserve authentication/authorization checks"},
+    {"name":"migration-failure","source":"protected migration job exit status","condition":"Any nonzero exit","severity":"page","action":"Stop rollout, preserve migration evidence, follow forward-fix/restore decision"},
+    {"name":"backup-failure-or-age","source":"external scheduler exit status + archive catalog","condition":"Any failed job or latest successful logical backup age > 26h; PITR gap > 5m if configured","severity":"page","action":"Verify archive/key separation and restore drill; scheduler and PITR are external prerequisites"},
+    {"name":"storage-pressure","source":"platform PostgreSQL/Redis/disk metrics","condition":"Disk free < 20% or Redis memory > 80% for 10m, tune to provider limits","severity":"page","action":"Increase capacity safely; preserve Redis noeviction and do not disable abuse budgets"}
+  ],
+  "requiredBeforeDeployment": ["named owner and on-call route","protected collector with retention/access policy","tested alert delivery and recovery notification","environment-specific threshold review","worker expiry backlog gauge from protected database/platform collection"]
+}

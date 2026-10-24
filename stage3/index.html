@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#080b15" />
+  <meta name="description" content="VIBETIX Live Race Studio — نظارت زنده بر رقابت واقعی ۱۰۰۰ درخواست HTTP برای ۱۰ بلیت و تأیید نتیجه PostgreSQL" />
+  <title>VIBETIX — Live Race Studio</title>
+  <link rel="stylesheet" href="/style.css" />
+  <script defer src="/app.js"></script>
+</head>
+<body>
+  <div class="background-glow" aria-hidden="true"></div>
+  <div class="app-shell">
+    <header class="masthead">
+      <div class="brand-side">
+        <div class="brand-logo" aria-label="VIBETIX"><span>V</span><i></i></div>
+        <div class="brand-name"><strong>VIBETIX<span class="brand-dot">.</span></strong><small>LIVE RACE STUDIO</small></div>
+        <span class="header-divider"></span>
+        <span class="edition-label">ENGINEERING LAB <span> / 03</span></span>
+      </div>
+      <div class="header-actions">
+        <div class="live-indicator" id="connection-pill"><span class="status-dot"></span><span id="connection-label">در حال اتصال</span></div>
+        <button id="focus-button" class="ghost-button" type="button" aria-pressed="false"><span aria-hidden="true">⛶</span> حالت ضبط</button>
+      </div>
+    </header>
+
+    <button class="focus-start-button" id="focus-run-button" type="button">▶ شروع آزمون واقعی</button>
+    <main>
+      <section class="hero">
+        <div class="hero-copy">
+          <div class="eyebrow"><span class="eyebrow-rule"></span> CONCURRENCY ENGINEERING / REAL HTTP</div>
+          <h1>هزار نفر.<br><span class="gradient-type">فقط ده بلیت.</span></h1>
+          <p>یک رقابت واقعی روی سرور؛ با ردیابی زنده هر درخواست و بررسی نهایی داده‌ها در PostgreSQL.</p>
+          <div class="hero-tags">
+            <span><span class="tag-dot teal"></span> PostgreSQL transaction</span>
+            <span><span class="tag-dot purple"></span> Fastify API</span>
+            <span><span class="tag-dot gray"></span> Isolated Docker</span>
+          </div>
+        </div>
+        <div class="hero-visual" aria-hidden="true">
+          <div class="ring ring-outer"></div><div class="ring ring-mid"></div><div class="ring ring-inner"></div>
+          <div class="hero-orbit orbit-a"></div><div class="hero-orbit orbit-b"></div>
+          <div class="hero-center"><strong>10</strong><span>TICKETS</span></div>
+          <div class="orbit-label label-top">1,000 REQUESTS</div><div class="orbit-label label-bottom">ATOMIC BOOKING</div>
+        </div>
+      </section>
+
+      <section class="live-ribbon" aria-label="وضعیت آزمون">
+        <div class="ribbon-lead"><span class="ribbon-pulse"></span><span id="run-state-label">آماده برای تست</span></div>
+        <div class="ribbon-caption" id="step-message" role="status" aria-live="polite">برای اجرای آزمون واقعی، Docker را روشن کنید.</div>
+        <span class="ribbon-ref" id="run-reference">STANDBY MODE</span>
+      </section>
+
+      <section class="stats" aria-label="آمار رقابت">
+        <article class="stat-card primary-stat">
+          <div class="stat-overline"><span>01 / TOTAL REQUESTS</span><span class="stat-icon">↗</span></div>
+          <div class="stat-numeral" id="total-number">1,000</div>
+          <div class="stat-bottom"><span>درخواست HTTP</span><span class="stat-small">هدف آزمون</span></div>
+        </article>
+        <article class="stat-card winning-stat">
+          <div class="stat-overline"><span>02 / ACCEPTED HOLDS</span><span class="stat-icon">✓</span></div>
+          <div class="stat-numeral stat-green" id="won-number">0</div>
+          <div class="stat-bottom"><span>رزروهای پذیرفته‌شده</span><span class="stat-small" id="won-detail">در انتظار پاسخ</span></div>
+        </article>
+        <article class="stat-card failure-stat">
+          <div class="stat-overline"><span>03 / REJECTED HOLDS</span><span class="stat-icon">×</span></div>
+          <div class="stat-numeral stat-red" id="lost-number">0</div>
+          <div class="stat-bottom"><span>درخواست‌های ردشده (409)</span><span class="stat-small">بدون فروش اضافه</span></div>
+        </article>
+        <article class="stat-card duration-stat">
+          <div class="stat-overline"><span>04 / COMPLETED</span><span class="stat-icon">◷</span></div>
+          <div class="stat-numeral" id="done-number">0<span class="stat-suffix">/ 1000</span></div>
+          <div class="stat-bottom"><span>پاسخ‌های دریافت‌شده</span><span class="stat-small" id="done-percent">0%</span></div>
+        </article>
+      </section>
+
+      <div class="dashboard-grid">
+        <section class="panel matrix-panel" aria-labelledby="matrix-title">
+          <div class="panel-head">
+            <div><div class="panel-kicker">LIVE REQUEST MAP <span class="muted-separator"> / </span> 1000 SESSIONS</div><h2 id="matrix-title">نقشه زنده رقابت</h2></div>
+            <div class="matrix-legend" aria-label="راهنمای وضعیت خانه‌ها"><span><i class="legend-dot waiting"></i> در انتظار</span><span><i class="legend-dot won"></i> موفق</span><span><i class="legend-dot lost"></i> ردشده</span><span><i class="legend-dot error"></i> خطا</span></div>
+          </div>
+          <div class="matrix-surround"><div class="request-matrix" id="request-matrix" aria-hidden="true"></div></div>
+          <div class="matrix-footer"><span class="matrix-note"><span class="foot-circle">i</span> هر خانه = نتیجه یک درخواست HTTP واقعی</span><span class="matrix-progress-label"><span id="matrix-progress">0</span> / 1000 PROCESSED</span></div>
+          <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+        </section>
+
+        <aside class="right-rail">
+          <section class="panel control-panel">
+            <div class="panel-kicker">BENCHMARK CONTROL / LOCAL ONLY</div>
+            <h2>اتاق کنترل</h2>
+            <p>آزمون روی یک محیط Docker جداگانه اجرا می‌شود و داده‌های اصلی را تغییر نمی‌دهد.</p>
+            <div class="test-config"><div><span>شرکت‌کننده</span><strong>1,000</strong></div><div><span>ظرفیت فروش</span><strong>10</strong></div><div><span>HTTP هم‌زمان</span><strong id="config-concurrency">24</strong></div></div>
+            <button class="run-button" type="button" id="run-button"><span class="play-icon">▶</span><span id="run-button-label">شروع آزمون واقعی</span><span class="run-arrow">↖</span></button>
+            <div class="control-footnote" id="control-footnote">برای اجرای آزمون، Docker Engine باید روشن باشد.</div>
+          </section>
+          <section class="panel performance-panel">
+            <div class="panel-head compact"><div><div class="panel-kicker">HTTP OBSERVABILITY</div><h2>عملکرد واقعی API</h2></div><span class="chip">LIVE DATA</span></div>
+            <div class="performance-main"><div class="speed-label">THROUGHPUT</div><div class="speed-number"><strong id="rps-value">—</strong><span>req/s</span></div></div>
+            <div class="performance-list"><div><span>LATENCY P50</span><strong id="latency-p50">—</strong></div><div><span>LATENCY P95</span><strong id="latency-p95">—</strong></div><div><span>LATENCY P99</span><strong id="latency-p99">—</strong></div><div><span>PEAK IN-FLIGHT</span><strong id="peak-value">—</strong></div></div>
+            <small class="measurement-caption">اعداد از پاسخ‌های واقعی HTTP محاسبه می‌شوند؛ قبل از اجرا مقداری ندارند.</small>
+          </section>
+        </aside>
+      </div>
+
+      <section class="verification-card" id="verification-card" aria-labelledby="verification-title">
+        <div class="verification-emblem"><span>◎</span></div>
+        <div class="verification-copy"><div class="panel-kicker">DATABASE INTEGRITY / FINAL VERIFICATION</div><h2 id="verification-title">منتظر تأیید دیتابیس</h2><p id="verification-description">تا تأیید نهایی PostgreSQL، هیچ نتیجه‌ای به‌عنوان فروش موفق قطعی اعلام نمی‌شود.</p></div>
+        <div class="verification-record"><span class="record-label">VERIFICATION STATUS</span><strong id="verification-status">NOT VERIFIED</strong><small id="record-reference">—</small></div>
+      </section>
+      <footer class="page-footer"><span>© VIBETIX / ENGINEERING EXPERIMENT</span><span>پرداخت‌ها شبیه‌سازی‌شده‌اند · ابزار تست محلی، نه بنچمارک عمومی پروداکشن</span><span>STAGE 03 / LIVE TELEMETRY</span></footer>
+    </main>
+  </div>
+</body>
+</html>

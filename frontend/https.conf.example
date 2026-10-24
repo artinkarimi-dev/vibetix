@@ -1,0 +1,53 @@
+client_body_temp_path /tmp/client_body;
+proxy_temp_path /tmp/proxy;
+fastcgi_temp_path /tmp/fastcgi;
+uwsgi_temp_path /tmp/uwsgi;
+scgi_temp_path /tmp/scgi;
+map $uri $vibetix_cache_control {
+ default "no-cache";
+ ~^/api/ "";
+ ~^/assets/ "public, max-age=31536000, immutable";
+ ~^/images/ "public, max-age=86400";
+}
+server {
+ listen 8080;
+ server_name tickets.example.invalid;
+ return 308 https://tickets.example.invalid$request_uri;
+}
+server {
+ listen 8443 ssl;
+ server_name tickets.example.invalid;
+ ssl_certificate /run/secrets/tls_certificate;
+ ssl_certificate_key /run/secrets/tls_private_key;
+ ssl_protocols TLSv1.2 TLSv1.3;
+ ssl_session_tickets off;
+ server_tokens off;
+ root /usr/share/nginx/html;
+ client_max_body_size 32k;
+ add_header Cache-Control $vibetix_cache_control always;
+ add_header Strict-Transport-Security "max-age=31536000" always;
+ add_header X-Content-Type-Options nosniff always;
+ add_header X-Frame-Options DENY always;
+ add_header Referrer-Policy strict-origin-when-cross-origin always;
+ add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
+ add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'; upgrade-insecure-requests" always;
+ location /api/ {
+   proxy_pass http://backend:3001;
+
+   proxy_hide_header Strict-Transport-Security;
+   proxy_hide_header Content-Security-Policy;
+   proxy_hide_header X-Content-Type-Options;
+   proxy_hide_header Referrer-Policy;
+   proxy_hide_header Permissions-Policy;
+   proxy_hide_header X-Frame-Options;
+
+   proxy_set_header Host $host;
+   proxy_set_header X-Forwarded-Proto https;
+   proxy_set_header X-Forwarded-For $remote_addr;
+   proxy_connect_timeout 5s;
+   proxy_read_timeout 20s;
+ }
+ location /assets/ { try_files $uri =404; }
+ location /images/ { try_files $uri =404; }
+ location / { try_files $uri $uri/ /index.html; }
+}

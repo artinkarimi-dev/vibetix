@@ -1,0 +1,13 @@
+node_modules/
+dist/
+*.local
+artifacts/
+
+.env
+.env.*
+!.env.example
+!backend/.env.example
+backend/dist/
+backend/.postgres/
+
+!.env.staging.example

@@ -1,0 +1,36 @@
+# Stage 4 production-like portfolio deployment runbook
+
+**Audience:** operator with explicit control of the DNS name, private PostgreSQL/Redis, TLS termination and immutable container registry. This is a *portfolio demonstration deployment*, not commercial ticket sales or a turnkey SaaS installation. The included images and infrastructure have NOT been deployed or runtime-qualified by the Stage 4 authoring environment.
+
+## No-Go conditions
+
+- `stage4:verify` fails, the current commit has no passing CI evidence, live benchmark record is missing, or reported oversell / unexpected HTTP outcomes > 0.
+- Any credential is checked into Git, put in the Docker image, passed through `VITE_*`, printed into logs, or embedded in the ZIP.
+- Database name is not dedicated `*_demo`; simulated payment mode is enabled with `NODE_ENV=production`; Redis TLS/ACL or database verified TLS is missing.
+- A production image is mutable (`latest`), migrations were not rehearsed, backups cannot be restored, the HTTPS certificate is invalid, or host readiness cannot be checked.
+- Public nginx vhost still refers to `tickets.example.invalid`, origin does not match the actual TLS host, or missing monitoring/retention ownership.
+
+## Run sequence (operator gated, not automatic deployment)
+
+1. Select a **separate staging host** and allocate a dedicated `*_demo` database, least-privilege runtime role, privileged migrator role for offline migrations only, private managed PostgreSQL with verified TLS, and Redis `rediss://` with ACL. Use fictional visitor data and no real merchant integration. The server code requires PostgreSQL URLs with `sslmode=require&sslaccept=strict`, and production Redis authentication; see `backend/src/config.ts` and `docs/PORTFOLIO_DEPLOYMENT.md`.
+2. Create independent random signing/abuse secrets in 0600 files; store database/Redis URLs in 0600 files. Do not set the equivalent plaintext env vars. Review certificate and key read permissions in the chosen container runtime. Confirm that key/cert and external Compose secrets will actually be readable by nginx's non-root user.
+3. Build, scan and review the exact commit/image pair. Record their **registry digests** as `VIBETIX_BACKEND_IMAGE=...@sha256:...` and `VIBETIX_FRONTEND_IMAGE=...@sha256:...`. Local build is not a digest identity. Existing Dockerfiles use digest-pinned bases and unprivileged runtime users, but those properties must be retested on the target host.
+4. Run `npm run stage4:nginx -- tickets.yourdomain.com` locally, review `artifacts/stage4/nginx/https.conf`, and supply its absolute path as `NGINX_HTTPS_CONFIG_FILE` to the Compose operator environment. **Do not use the included example file directly in production**; it intentionally contains an invalid host.
+5. Export `VIBETIX_DOMAIN`, `APP_ORIGIN=https://tickets.yourdomain.com`, `APP_MODE=portfolio`, `ALLOW_SIMULATED_PAYMENTS=false`, the image digests, path variables for the seven required files, and `RATE_LIMIT_BACKEND=redis`. Run `npm run stage4:deploy-check`; it must pass. This is a static and TLS-key preflight, not a certificate chain, routing, Docker runtime or reachability check.
+6. With credentials provisioned but before deployment, run `docker compose --env-file <operator-env-file> -f deploy/compose.production.yml -f deploy/compose.portfolio.yml config -q`. **Beware:** `docker compose config` can render expanded secrets or connection strings from Compose interpolations; do not publish its raw output. Do not run the full app with insecure sample configuration. Run nginx syntax validation (`nginx -t`) with the actual generated vhost and mounted secrets/certificate paths in a disposable target-config-equivalent container.
+7. Deploy to *staging* first. Execute migrations separately with a migrator-only credential using the reviewed migration workflow; do not give the application/worker migration or backup credentials. Confirm migration state and database integrity. Start API+worker and validate `/api/health/ready` (not only `/health`), check worker heartbeat and Redis ACL connectivity, then bring up the frontend.
+8. Verify HTTP redirect to HTTPS, trusted certificate chain, Secure/HttpOnly/SameSite cookie behavior, CSRF/CORS controls, read-only private responses, access denial to another user's tickets, a fictional signup→reserve→checkout→ticket journey, expired holds, duplicate order submissions, and worker recovery. Confirm all simulated prices and tickets are visibly labeled, no real payment or email is sent, and no public database/admin ports are exposed.
+9. Exercise a **controlled restore** of a protected staging backup and rehearse rollbacks. Record objective RTO/RPO as measured, not promises. Enable external uptime probes, alerts for backend/worker liveness, failed release gates, nonzero unexpected booking responses, DB storage/connection pressure, queue backlog, TLS expiry, and abnormal auth attempts. Configure log retention and personal data deletion policy before opening the public portfolio demo.
+10. Require a human approval after staging passes. Promote the two exact digests; verify the public DNS/HTTPS path, cold load, route readiness and restricted network exposure. Apply branch protection and require CI checks before merges. The repo itself does **not** push containers or promote a public release automatically.
+
+## Rollback / incident response
+
+- **Application-only failure:** stop new traffic, preserve telemetry and database data, revert to the previous *tested* frontend and backend image digests together, verify compatibility with the current schema and resume traffic only after health + smoke checks. Never reverse a database migration blindly.
+- **Schema/data problem:** do not restore an old snapshot over live data without assessing lost writes. Freeze access, preserve current evidence, restore a point-in-time copy to an isolated instance, run integrity checks and rehearsed migrations, then plan a controlled cutover under an approved RPO/RTO.
+- **Potential secret compromise:** restrict traffic, rotate the specific database/Redis/abuse/signing secrets, invalidate sessions/tickets as necessary and audit logs. Do not write values into incident tickets or GitHub Actions logs.
+- **Unexpected oversell:** stop booking and payment paths, preserve original records, investigate transaction/rate-limit/worker/ledger behavior and reconcile before restoring booking. No automatic arbitrary cancellation.
+- **Load and security testing:** only in a dedicated environment under operator control. Stage 4's 1000-request runner uses an isolated disposable Compose project and never targets a public competitor or production ticketing service.
+
+## Limitations of this delivery
+
+The release script proves **static gate** or (when run with Docker) **specific live Stage 1–3 test success**. It does not prove global throughput at 1000 simultaneous in-flight users, multi-server correctness, cloud capacity, pen-test clearance, actual traffic cost, public TLS availability, disaster recovery guarantees or production payment processing. Metrics must cite the exact hardware, Git commit, HTTP in-flight limit, and report hash. Consult `docs/STAGE4_ENGINEERING_CASE_STUDY.md` for an interview-ready design and claims matrix.

@@ -1,0 +1,74 @@
+name: Verify VIBETIX
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    services:
+      postgres:
+        image: postgres:17-bookworm@sha256:3645570cccdfa447589da9f57dd740faa29b30938e861289a5574b6ca6b03826
+        env:
+          POSTGRES_PASSWORD: ci-isolated-only
+          POSTGRES_DB: vibetix_ci_demo_test
+        ports: ["5432:5432"]
+        options: --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 20
+      redis:
+        image: redis:7.4-alpine@sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499
+        ports: ['6379:6379']
+        options: --health-cmd 'redis-cli ping' --health-interval 5s --health-timeout 3s --health-retries 20
+    env:
+      DATABASE_URL: postgresql://postgres:ci-isolated-only@localhost:5432/vibetix_ci_demo_test
+      ALLOW_DATABASE_TESTS: "true"
+      REDIS_TEST_URL: redis://127.0.0.1:6379
+      MIGRATION_DATABASE_URL: postgresql://postgres:ci-isolated-only@localhost:5432/vibetix_ci_demo_test
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm db:generate
+      - run: pnpm db:migrate
+      - run: APP_MODE=portfolio pnpm db:seed
+      - run: pnpm format:check
+      - run: pnpm lint
+      - run: pnpm typecheck && pnpm backend:typecheck && pnpm backend:build
+      - run: pnpm test && pnpm test:production
+      - run: pnpm build && pnpm build:audit && pnpm images:audit
+      - run: pnpm security:check && pnpm audit
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm test:e2e
+      - run: pnpm test:portfolio
+      - run: pnpm test:payment-failure
+      - run: pnpm test:fullstack
+      - run: pnpm db:integrity
+        env:
+          INTEGRITY_DATABASE_URL: ${{ env.DATABASE_URL }}
+      - run: |
+          mkdir -p artifacts/preproduction
+          pnpm licenses list --prod --json > artifacts/preproduction/runtime-dependencies.json
+          node scripts/create-runtime-sbom.mjs
+      - run: node scripts/build-checksums.mjs
+      - name: Build pinned runtime images (no deployment)
+        run: |
+          docker build -f backend/Dockerfile -t vibetix-api:ci .
+          docker build -f frontend/Dockerfile -t vibetix-frontend:ci .
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: qa-artifacts
+          path: |
+            artifacts/playwright-report/
+            artifacts/playwright-results.json
+            artifacts/security/static-checks.json
+            artifacts/bundle-audit.json
+            artifacts/preproduction/sbom.cdx.json
+            artifacts/release/final-verification.json
+            artifacts/release/build-checksums.json
+          retention-days: 7

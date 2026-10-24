@@ -1,0 +1,73 @@
+import type { Extra } from "../types";
+export const extras: Extra[] = [
+  {
+    id: "lounge",
+    name: "VIP Lounge Access",
+    description:
+      "Unwind before the show in a private lounge with refreshments and arena views. A lounge pass does not change your seat.",
+    priceCents: 6500,
+    currency: "USD",
+    unit: "person",
+    maxQuantity: 6,
+    image: "/images/extras-lounge.webp",
+    imageAlt: "Violet-lit concert lounge with arena views",
+    imageWidth: 768,
+    imageHeight: 512,
+  },
+  {
+    id: "parking",
+    name: "Parking Pass",
+    description:
+      "Make your arrival effortless with a reserved parking space near the venue. One pass per vehicle.",
+    priceCents: 3500,
+    currency: "USD",
+    unit: "vehicle",
+    maxQuantity: 2,
+    image: "/images/extras-parking.webp",
+    imageAlt: "Premium venue parking garage",
+    imageWidth: 768,
+    imageHeight: 512,
+  },
+  {
+    id: "fast-lane",
+    name: "Fast Lane Entry",
+    description:
+      "Skip the standard entry queue with a dedicated fast lane. Security checks still apply.",
+    priceCents: 1800,
+    currency: "USD",
+    unit: "person",
+    maxQuantity: 6,
+    image: "/images/extras-fast-lane.webp",
+    imageAlt: "Concert venue fast lane entrance",
+    imageWidth: 768,
+    imageHeight: 512,
+  },
+  {
+    id: "merch",
+    name: "Merch Package",
+    description:
+      "Take the night home: a tour tee, collectible tote, and commemorative lanyard. Pick up at the venue.",
+    priceCents: 5500,
+    currency: "USD",
+    unit: "package",
+    maxQuantity: 6,
+    image: "/images/extras-merch.webp",
+    imageAlt: "ECHOES tour apparel and merchandise",
+    imageWidth: 768,
+    imageHeight: 512,
+  },
+  {
+    id: "photo",
+    name: "Tour Photo Package",
+    description:
+      "A collectible digital photo set from the tour, delivered with your simulated order.",
+    priceCents: 2500,
+    currency: "USD",
+    unit: "package",
+    maxQuantity: 1,
+    image: "/images/extras-photo.webp",
+    imageAlt: "Concert photography and collectible tour photo package",
+    imageWidth: 768,
+    imageHeight: 512,
+  },
+];

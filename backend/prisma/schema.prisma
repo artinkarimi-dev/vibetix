@@ -1,0 +1,251 @@
+generator client {
+ provider = "prisma-client-js"
+}
+datasource db {
+ provider = "postgresql"
+ url = env("DATABASE_URL")
+}
+enum Role {
+ CUSTOMER
+ ADMIN
+}
+enum EventStatus {
+ DRAFT
+ ON_SALE
+ CANCELLED
+}
+enum SeatStatus {
+ AVAILABLE
+ HELD
+ SOLD
+}
+enum OrderStatus {
+ CONFIRMED
+ FAILED
+}
+enum PromoType {
+ PERCENT
+ FIXED
+}
+enum TicketStatus {
+ VALID
+ REVOKED
+ USED
+}
+model User {
+ id String @id @default(uuid())
+ email String @unique
+ passwordHash String
+ firstName String
+ lastName String
+ role Role @default(CUSTOMER)
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ sessions Session[]
+ holds SeatHold[]
+ orders Order[]
+ favorites Favorite[]
+}
+model Session {
+ id String @id
+ userId String
+ user User @relation(fields:[userId], references:[id], onDelete:Cascade)
+ expiresAt DateTime
+ createdAt DateTime @default(now())
+ lastSeenAt DateTime @default(now())
+ mfaVerifiedAt DateTime?
+ @@index([expiresAt])
+ @@index([userId])
+}
+model AuditLog {
+ id String @id @default(uuid())
+ actorId String
+ action String
+ resource String
+ resourceId String
+ metadata Json
+ ip String
+ userAgent String
+ createdAt DateTime @default(now())
+ @@index([actorId,createdAt])
+ @@index([resource,resourceId,createdAt])
+}
+model Artist {
+ id String @id
+ name String
+ slug String @unique
+ bio String
+ image String
+ genre String
+ imageAlt String
+ createdAt DateTime @default(now())
+ events Event[]
+}
+model Venue {
+ id String @id
+ name String
+ address String
+ city String
+ country String
+ capacity Int
+ timezone String
+ image String
+ description String
+ sections Section[]
+ events Event[]
+}
+model Event {
+ id String @id
+ artistId String
+ venueId String
+ title String
+ description String
+ date DateTime
+ doorsOpen DateTime
+ status EventStatus @default(DRAFT)
+ presentation Json
+ createdAt DateTime @default(now())
+ artist Artist @relation(fields:[artistId], references:[id])
+ venue Venue @relation(fields:[venueId], references:[id])
+ inventory EventSeat[]
+ orders Order[]
+ favorites Favorite[]
+ @@index([status,date])
+ @@index([artistId])
+ @@index([venueId])
+}
+model Section {
+ id String @id
+ venueId String
+ name String
+ label String
+ tier String
+ capacity Int
+ level String
+ position Int
+ venue Venue @relation(fields:[venueId], references:[id])
+ seats Seat[]
+ @@unique([venueId,label])
+}
+model Seat {
+ id String @id
+ sectionId String
+ row Int
+ number Int
+ section Section @relation(fields:[sectionId], references:[id])
+ inventory EventSeat[]
+ @@unique([sectionId,row,number])
+}
+model EventSeat {
+ id String @id
+ eventId String
+ seatId String
+ status SeatStatus @default(AVAILABLE)
+ price Int
+ event Event @relation(fields:[eventId], references:[id])
+ seat Seat @relation(fields:[seatId], references:[id])
+ hold SeatHold?
+ orderItem OrderItem?
+ @@unique([eventId,seatId])
+ @@index([eventId,status])
+}
+model SeatHold {
+ id String @id @default(uuid())
+ eventSeatId String @unique
+ userId String?
+ expiresAt DateTime
+ createdAt DateTime @default(now())
+ eventSeat EventSeat @relation(fields:[eventSeatId], references:[id],onDelete:Cascade)
+ user User? @relation(fields:[userId], references:[id])
+ @@index([expiresAt])
+ @@index([userId])
+}
+model Order {
+ id String @id @default(uuid())
+ userId String
+ eventId String
+ status OrderStatus
+ subtotal Int
+ fees Int
+ tax Int
+ total Int
+ discount Int
+ currency String @default("USD")
+ idempotencyKey String
+ requestHash String
+ snapshot Json
+ createdAt DateTime @default(now())
+ user User @relation(fields:[userId], references:[id])
+ event Event @relation(fields:[eventId], references:[id])
+ items OrderItem[]
+ payment Payment?
+ outbox OutboxJob[]
+ @@unique([userId,idempotencyKey])
+ @@index([userId,createdAt])
+ @@index([eventId])
+}
+model OrderItem {
+ id String @id @default(uuid())
+ orderId String
+ eventSeatId String @unique
+ price Int
+ order Order @relation(fields:[orderId], references:[id])
+ eventSeat EventSeat @relation(fields:[eventSeatId], references:[id])
+ ticket Ticket?
+ @@index([orderId])
+}
+model Ticket {
+ id String @id @default(uuid())
+ orderItemId String @unique
+ ticketCode String @unique
+ qrCode String @unique
+ status TicketStatus @default(VALID)
+ orderItem OrderItem @relation(fields:[orderItemId], references:[id])
+}
+model Payment {
+ id String @id @default(uuid())
+ orderId String @unique
+ provider String
+ status String
+ transactionId String @unique
+ amount Int
+ order Order @relation(fields:[orderId], references:[id])
+}
+model PromoCode {
+ id String @id @default(uuid())
+ code String @unique
+ type PromoType
+ value Int
+ minimum Int @default(0)
+ expiresAt DateTime
+ active Boolean @default(true)
+}
+model Extra {
+ id String @id
+ name String
+ price Int
+ unit String
+ maxQuantity Int
+ presentation Json
+}
+model Favorite {
+ userId String
+ eventId String
+ user User @relation(fields:[userId], references:[id], onDelete:Cascade)
+ event Event @relation(fields:[eventId], references:[id],onDelete:Cascade)
+ @@id([userId,eventId])
+ @@index([eventId])
+}
+model OutboxJob {
+ id String @id @default(uuid())
+ orderId String
+ kind String
+ status String @default("PENDING")
+ attempts Int @default(0)
+ availableAt DateTime @default(now())
+ lastError String?
+ createdAt DateTime @default(now())
+ order Order @relation(fields:[orderId], references:[id])
+ @@index([status,availableAt])
+ @@unique([orderId,kind])
+}
